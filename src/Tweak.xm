@@ -4,5 +4,5 @@
     NSLog(@"[TikSpice] loaded %@", TSSpiceVersion);
     TSPrivateHooksInstall();
     TSChromeRefresh();
-    [TSFloater install];
+    [TSEntry installRecoveryGesture];
 }

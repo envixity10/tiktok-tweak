@@ -6,12 +6,13 @@ The settings UI is a searchable, inset-grouped sheet. Private TikTok class and s
 
 ## Open settings
 
-- Tap the sparkle button (drag it; it snaps to the left or right edge).
-- Long-press the sparkle for save, copy URL, hook status, or hide.
-- Shake the phone.
-- On a settings or profile screen whose class is listed in the registry, a sparkle is added to the navigation bar.
+TikTok → profile menu → **Settings and privacy**. TikSpice is the first row in that table, in the same style as the cells around it (label, icon, chevron). Tapping it opens the panel.
 
-Hiding the sparkle requires Shake to stay on, so there is still a way back in. Preferences are stored with `NSUserDefaults` suite `com.tikspice.preferences` inside the app container.
+That row is attached when the screen’s class is in the `settingsHome` group in `src/HookRegistry.m`, or when the navigation title is “Settings and privacy” (including the common localized forms). The match is the exact class, not a subclass, so it does not land on every settings subpage.
+
+If none of those classes exist in the running app, the same row is added to the profile hamburger menu instead (classes in `profileMenu`, or a class whose name contains both `Profile` and `Menu`). A menu that is not a table gets a row pinned to the bottom of the sheet.
+
+Recovery, if neither place shows the row: touch the screen with **three fingers and hold**. Preferences are stored with `NSUserDefaults` suite `com.tikspice.preferences` inside the app container.
 
 ## Features
 
@@ -38,7 +39,7 @@ Hiding the sparkle requires Shake to stay on, so there is still a way back in. P
 | Region code override | String getters such as `currentRegion` | Needs your build. Only replaces an `NSString` |
 | Hook status and recent screen names | Runtime class list | Ready. Use this to update the registry |
 
-Everything that changes TikTok's chrome is off until you turn it on. The floating button, shake, and haptics start on.
+Everything that changes TikTok's chrome is off until you turn it on. Haptics start on.
 
 ## Theme JSON
 
@@ -72,14 +73,14 @@ Hex colors accept `#RGB`, `#RGBA`, `#RRGGBB`, and `#RRGGBBAA`. A file can contai
 | `src/PrivateHooks.xm` | Installs registry rows that match this process |
 | `src/Scanner.m` | Label and class-name hiding rules |
 | `src/Playback.xm`, `src/PlaybackGate.m` | `AVPlayer` speed, loop, auto-advance window |
-| `src/Interface.xm` | Confirmations, tab labels, shake, screen log |
-| `src/Floater.m` | Sparkle button |
+| `src/Interface.xm` | Confirmations, tab labels, screen log |
+| `src/Entry.m` | Settings row, profile-menu fallback, three-finger recovery |
 | `scripts/install-theos.sh` | Linux Theos + iOS 16.5 SDK |
 | `scripts/inject-ipa.sh` | cyan injection |
 | `.github/workflows/build.yml` | Push build, and IPA injection on dispatch |
 | `packaging/PhotoUsage.plist` | Merged into the IPA so Photos can be written |
 
-The substrate filter plist covers:
+The package filter plist covers:
 
 - `com.zhiliaoapp.musically`
 - `com.ss.iphone.ugc.Ame`
@@ -98,7 +99,7 @@ export THEOS="$HOME/theos"
 make package FINALPACKAGE=1
 ```
 
-The package is `packages/com.tikspice.tweak_1.0.0_iphoneos-arm64.deb`. The dylib is staged at `var/jb/Library/MobileSubstrate/DynamicLibraries/TikSpice.dylib`.
+The package is `packages/com.tikspice.tweak_1.0.1_iphoneos-arm64.deb`. The dylib staged inside it only links system libraries (`/usr/lib` and `/System/Library`). `scripts/check-dylib-deps.py` fails the build if CydiaSubstrate, ElleKit, `/var/jb`, or an `@rpath` dependency appears.
 
 On a Mac with Theos and an iOS SDK already installed, export `THEOS` and run the same `make` command. `scripts/install-theos.sh` is the Linux toolchain only.
 
@@ -108,7 +109,7 @@ On a Mac with Theos and an iOS SDK already installed, export `THEOS` and run the
 
 `.github/workflows/build.yml` has two jobs.
 
-**Build tweak** runs on every push and pull request. It installs Theos on `ubuntu-latest`, runs `make package`, and uploads the `.deb` and `TikSpice.dylib` as the `TikSpice-deb` artifact (kept 5 days).
+**Build tweak** runs on every push and pull request. It installs Theos on `ubuntu-latest`, runs `make package`, checks that `TikSpice.dylib` links only system libraries, and uploads two artifacts kept for 5 days: `TikSpice-deb` (the package) and `TikSpice-dylib` (the file LiveContainer loads).
 
 **Inject into IPA** runs only for a manual dispatch. In the Actions tab, open **Build**, choose **Run workflow**, and set:
 
@@ -138,7 +139,7 @@ Class names cannot be checked in this repo because the app binary is not here. T
 | Field | Meaning |
 | --- | --- |
 | `ident` | Stable id, unique in the table |
-| `group` | `ads`, `feed`, `video`, `region`, `live`, `shop`, `upload`, `story`, `music`, `settings`, `profile`, `interaction`, `player` |
+| `group` | `ads`, `feed`, `video`, `region`, `live`, `shop`, `upload`, `story`, `music`, `settingsHome`, `profileMenu`, `profile`, `interaction`, `player` |
 | `className` | Exact Objective-C class |
 | `selector` | Instance method with no extra arguments, or `NULL` for a probe |
 | `swapSelector` | Play-address getter for `TSHookKindSwapPlay` |
@@ -162,16 +163,32 @@ Label hiding that does not need a private method goes in the `kRules` table at t
 
 Turn on **Log view controllers** if you want each screen class in the device log as well.
 
+## LiveContainer
+
+LiveContainer injects `.dylib` files. It does not load a `.deb`. The 1.0.0 dylib also linked `/var/jb/usr/lib/libsubstrate.dylib`. dyld refuses that path inside LiveContainer, so the file never ran and no entry point appeared. LiveContainer’s own ElleKit does not satisfy an absolute `/var/jb` install name.
+
+1.0.1 hooks Objective-C methods with the runtime (`method_setImplementation` via Logos’ internal generator). The shipped dylib does not link CydiaSubstrate, ElleKit, or anything under `/var/jb`.
+
+Load it like this:
+
+1. On GitHub, open the latest successful **Build** run (or run the workflow yourself).
+2. Download the **TikSpice-dylib** artifact. Leave the `.deb` artifact for a jailbreak install.
+3. Unzip the artifact. In LiveContainer, open **Tweaks** and import `TikSpice.dylib` into the folder you select for TikTok (an app-specific subfolder, or the root Tweaks folder).
+4. Select that folder for TikTok. Leave TweakLoader enabled (`Don't Load TweakLoader` off). LiveContainer signs the dylib when the app launches.
+5. Open TikTok, then Profile → menu → **Settings and privacy**. TikSpice is the first row.
+6. If your build’s settings class is not in `settingsHome`, open the profile hamburger menu. The row is added there instead.
+7. If neither shows it, touch and hold with three fingers. Hook status lists the screen class to add under `settingsHome` or `profileMenu`.
+
 ## Install the package
 
-Jailbreak (rootless, ElleKit or an equivalent substrate): install the `.deb`.
+Jailbreak (rootless): install the `.deb`. It does not depend on CydiaSubstrate; the same runtime hooks are inside the dylib.
 
-Sideload: use the patched IPA from the dispatch workflow, or inject the `.deb` yourself:
+Sideload outside LiveContainer: use the patched IPA from the dispatch workflow, or inject the `.deb` yourself. The patched IPA is uploaded only as an Actions artifact.
 
 ```bash
 ./scripts/inject-ipa.sh \
   --input YourApp.ipa \
-  --tweak packages/com.tikspice.tweak_1.0.0_iphoneos-arm64.deb \
+  --tweak packages/com.tikspice.tweak_1.0.1_iphoneos-arm64.deb \
   --output TikSpice-patched.ipa \
   --plist packaging/PhotoUsage.plist
 ```

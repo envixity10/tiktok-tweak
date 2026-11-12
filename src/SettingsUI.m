@@ -4,7 +4,6 @@
 #import "Owned.h"
 #import "UIUtil.h"
 #import "HookRegistry.h"
-#import "Floater.h"
 #import "Download.h"
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <objc/message.h>
@@ -721,10 +720,15 @@ static NSArray<NSString *> *TSHideKeys(void) {
 
     TSSection *access = [TSSection new];
     access.title = @"Opening TikSpice";
-    access.footer = @"The sparkle button can be dragged. Shake stays available so hiding the button does not lock you out.";
+    access.footer = @"TikTok → Settings and privacy. TikSpice is the first row. If that screen’s class isn’t in this build, the row is added to the profile menu instead. Recovery: touch the screen with three fingers and hold.";
+    TSRow *where = [TSRow new];
+    where.kind = TSRowInfo;
+    where.title = @"Settings and privacy";
+    where.subtitle = @"First row in that screen. Three-finger hold opens this panel if the row is missing.";
+    where.symbol = @"gearshape";
+    where.searchBlob = @"settings privacy entry three finger hold menu";
     access.rows = @[
-        TSToggleRow(@"Floating button", @"A draggable sparkle over the app.", @"circle.circle", TSKeyShowFloater),
-        TSToggleRow(@"Shake to open", @"Motion opens this panel.", @"iphone.radiowaves.left.and.right", TSKeyShakeToOpen),
+        where,
         TSToggleRow(@"Haptics", @"Taps and confirms click.", @"waveform", TSKeyHaptics),
     ];
 
@@ -811,7 +815,6 @@ static NSArray<NSString *> *TSHideKeys(void) {
     [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
     [alert addAction:[UIAlertAction actionWithTitle:@"Reset" style:UIAlertActionStyleDestructive handler:^(__unused UIAlertAction *action) {
         [[TSPrefs shared] reset];
-        [TSFloater install];
         TSHapticSuccess();
         [self rebuild];
     }]];
@@ -993,24 +996,13 @@ static NSArray<NSString *> *TSHideKeys(void) {
 }
 
 - (BOOL)fallbackForKey:(NSString *)key {
-    if ([key isEqualToString:TSKeyShowFloater] || [key isEqualToString:TSKeyShakeToOpen] || [key isEqualToString:TSKeyHaptics]) return YES;
-    return NO;
+    return [key isEqualToString:TSKeyHaptics];
 }
 
 - (void)toggle:(NSString *)key on:(BOOL)on sender:(UISwitch *)sender {
-    if ([key isEqualToString:TSKeyShowFloater] && !on && !TSBool(TSKeyShakeToOpen, YES)) {
-        sender.on = YES;
-        TSPresentAlert(self, @"Keep a way back in", @"Leave Shake to open on before hiding the button.");
-        return;
-    }
-    if ([key isEqualToString:TSKeyShakeToOpen] && !on && !TSBool(TSKeyShowFloater, YES)) {
-        sender.on = YES;
-        TSPresentAlert(self, @"Keep a way back in", @"Show the floating button before turning shake off.");
-        return;
-    }
+    (void)sender;
     [[TSPrefs shared] setBool:on forKey:key];
     TSHapticLight();
-    if ([key isEqualToString:TSKeyShowFloater]) [TSFloater install];
 }
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -1128,7 +1120,7 @@ static NSArray<NSString *> *TSHideKeys(void) {
         [sections addObject:recentSection];
     }
 
-    NSArray *groups = @[@"ads", @"feed", @"video", @"region", @"live", @"shop", @"upload", @"story", @"music", @"settings", @"profile", @"interaction", @"player"];
+    NSArray *groups = @[@"ads", @"feed", @"video", @"region", @"live", @"shop", @"upload", @"story", @"music", @"settingsHome", @"profileMenu", @"profile", @"interaction", @"player"];
     for (NSString *group in groups) {
         NSMutableArray *rows = [NSMutableArray array];
         for (TSHookResult *result in results) {

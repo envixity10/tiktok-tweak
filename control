@@ -1,7 +1,7 @@
 Package: com.tikspice.tweak
 Name: TikSpice
-Depends: mobilesubstrate
-Version: 1.0.0
+Depends: firmware (>= 15.0)
+Version: 1.0.1
 Architecture: iphoneos-arm
 Description: Personal TikTok theming and customization tweak
  In-app themes, playback controls, and feed chrome toggles for a

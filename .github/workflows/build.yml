@@ -1,8 +1,9 @@
 # TikSpice CI
 #
-# push / pull_request: compile the tweak and upload the .deb as an Actions artifact.
+# push / pull_request: compile the tweak and upload the .deb and a standalone
+# LiveContainer dylib as Actions artifacts.
 # workflow_dispatch: do that, then inject the package into a decrypted IPA URL
-# you supply and upload the patched IPA as a second artifact.
+# you supply and upload the patched IPA as another artifact.
 #
 # Artifacts stay on GitHub Actions with a short retention. This workflow does
 # not publish releases and does not upload the IPA anywhere else.
@@ -70,18 +71,25 @@ jobs:
           make package FINALPACKAGE=1
           mkdir -p dist
           cp -v packages/*.deb dist/
-          find .theos -name 'TikSpice.dylib' -exec cp -v {} dist/ \;
+          cp -v .theos/obj/arm64/TikSpice.dylib dist/TikSpice.dylib
           test -n "$(ls dist/*.deb)"
           test -f dist/TikSpice.dylib
+          python3 scripts/check-dylib-deps.py dist/TikSpice.dylib
           ls -lh dist
 
       - name: Upload .deb
         uses: actions/upload-artifact@v4
         with:
           name: TikSpice-deb
-          path: |
-            dist/*.deb
-            dist/TikSpice.dylib
+          path: dist/*.deb
+          retention-days: 5
+          if-no-files-found: error
+
+      - name: Upload LiveContainer dylib
+        uses: actions/upload-artifact@v4
+        with:
+          name: TikSpice-dylib
+          path: dist/TikSpice.dylib
           retention-days: 5
           if-no-files-found: error
 

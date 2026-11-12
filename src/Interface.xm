@@ -200,9 +200,7 @@ static BOOL TSShouldSwallowScroll(UIScrollView *scrollView, CGFloat deltaY, CGFl
     if ([name hasPrefix:@"TS"]) return;
     if (TSBool(TSKeyLogViewControllers, NO)) NSLog(@"[TikSpice] %@", name);
     [TSHookRegistry noteViewControllerClass:name];
-    if ([TSHookRegistry shouldOfferSettingsButtonForClass:name]) {
-        [TSFloater installAccessoryOnViewController:self];
-    }
+    [TSEntry considerViewController:self];
     static CFTimeInterval lastHooks = 0;
     CFTimeInterval now = CFAbsoluteTimeGetCurrent();
     if (now - lastHooks > 2.0) {
@@ -214,13 +212,3 @@ static BOOL TSShouldSwallowScroll(UIScrollView *scrollView, CGFloat deltaY, CGFl
 
 %end
 
-%hook UIWindow
-
-- (void)motionEnded:(UIEventSubtype)motion withEvent:(UIEvent *)event {
-    %orig;
-    if (motion == UIEventSubtypeMotionShake && TSBool(TSKeyShakeToOpen, YES)) {
-        [TSFloater openSettings];
-    }
-}
-
-%end

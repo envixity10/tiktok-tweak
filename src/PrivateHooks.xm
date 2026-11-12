@@ -2,7 +2,22 @@
 #import "Prefs.h"
 #import "TSKeys.h"
 #import <objc/message.h>
-#import <substrate.h>
+
+// Logos' internal generator hooks with the Objective-C runtime. Private hooks
+// do the same so the dylib has no CydiaSubstrate or ElleKit dependency.
+static void TSReplaceMethod(Class cls, SEL selector, IMP replacement, IMP *original) {
+    if (original) *original = NULL;
+    if (!cls || !selector || !replacement) return;
+    unsigned int count = 0;
+    Method *methods = class_copyMethodList(cls, &count);
+    for (unsigned int index = 0; index < count; index++) {
+        if (method_getName(methods[index]) != selector) continue;
+        if (original) *original = method_setImplementation(methods[index], replacement);
+        free(methods);
+        return;
+    }
+    free(methods);
+}
 
 typedef BOOL (*TSBoolIMP)(id, SEL);
 typedef void (*TSVoidIMP)(id, SEL);
@@ -78,8 +93,8 @@ static BOOL TSInstallOne(const TSHookSpec *spec, TSHookResult *result) {
         result.status = @"No installer for this kind";
         return NO;
     }
-    MSHookMessageEx(cls, sel, replacement, &slot->orig);
-    return YES;
+    TSReplaceMethod(cls, sel, replacement, &slot->orig);
+    return slot->orig != NULL;
 }
 
 void TSPrivateHooksInstall(void) {

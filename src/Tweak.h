@@ -8,5 +8,5 @@
 #import "Scanner.h"
 #import "PlaybackGate.h"
 #import "Download.h"
-#import "Floater.h"
+#import "Entry.h"
 #import "SettingsUI.h"

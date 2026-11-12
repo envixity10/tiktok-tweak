@@ -47,7 +47,7 @@ FOUNDATION_EXPORT void TSPrivateHooksInstall(void);
 + (NSArray<TSHookResult *> *)results;
 + (NSArray<NSString *> *)classNamesInGroup:(NSString *)group;
 + (BOOL)class:(Class)cls implementsSelector:(SEL)selector;
-+ (BOOL)shouldOfferSettingsButtonForClass:(NSString *)className;
++ (BOOL)groupHasLoadedClass:(NSString *)group;
 + (void)noteViewControllerClass:(NSString *)className;
 + (NSArray<NSString *> *)recentViewControllerNames;
 + (NSString *)summaryForGroup:(NSString *)group;

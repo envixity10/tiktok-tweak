@@ -2,7 +2,7 @@
 
 NSString *const TSSuiteName = @"com.tikspice.preferences";
 NSNotificationName const TSPrefsChangedNotification = @"com.tikspice.preferences.changed";
-NSString *const TSSpiceVersion = @"1.0.0";
+NSString *const TSSpiceVersion = @"1.0.1";
 
 NSString *const TSKeyThemePreset = @"theme.preset";
 NSString *const TSKeyThemeCustom = @"theme.custom";
@@ -41,11 +41,7 @@ NSString *const TSKeyPreferCleanURL = @"download.preferCleanURL";
 NSString *const TSKeyRegionEnabled = @"region.enabled";
 NSString *const TSKeyRegionCode = @"region.code";
 
-NSString *const TSKeyShowFloater = @"entry.floater";
-NSString *const TSKeyShakeToOpen = @"entry.shake";
 NSString *const TSKeyHaptics = @"entry.haptics";
-NSString *const TSKeyFloaterX = @"entry.floaterX";
-NSString *const TSKeyFloaterY = @"entry.floaterY";
 NSString *const TSKeyLogViewControllers = @"debug.logViewControllers";
 
 NSArray<NSString *> *TSAllPreferenceKeys(void) {
@@ -60,7 +56,7 @@ NSArray<NSString *> *TSAllPreferenceKeys(void) {
             TSKeySpeedEnabled, TSKeyPlaybackSpeed, TSKeyLoopVideo, TSKeyDisableAutoScroll,
             TSKeyConfirmLike, TSKeyConfirmFollow, TSKeyConfirmComment, TSKeyConfirmShare, TSKeyDisableDoubleTapLike,
             TSKeyPreferCleanURL, TSKeyRegionEnabled, TSKeyRegionCode,
-            TSKeyShowFloater, TSKeyShakeToOpen, TSKeyHaptics, TSKeyFloaterX, TSKeyFloaterY, TSKeyLogViewControllers
+            TSKeyHaptics, TSKeyLogViewControllers
         ];
     });
     return keys;
