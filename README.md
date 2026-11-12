@@ -6,7 +6,7 @@ The settings UI is a searchable, inset-grouped sheet. Private TikTok class and s
 
 ## Open settings
 
-TikTok → profile menu → **Settings and privacy**. TikSpice is the first row in that table, in the same style as the cells around it (label, icon, chevron). Tapping it opens the panel.
+TikTok → profile menu → **Settings and privacy**. TikSpice is a real row in that list, last in the **Account** card when that section exists, so it scrolls with the page and uses the same rounded card. Tapping it opens the panel.
 
 That row is attached when the screen’s class is in the `settingsHome` group in `src/HookRegistry.m`, or when the navigation title is “Settings and privacy” (including the common localized forms). The match is the exact class, not a subclass, so it does not land on every settings subpage.
 
@@ -99,7 +99,7 @@ export THEOS="$HOME/theos"
 make package FINALPACKAGE=1
 ```
 
-The package is `packages/com.tikspice.tweak_1.0.1_iphoneos-arm64.deb`. The dylib staged inside it only links system libraries (`/usr/lib` and `/System/Library`). `scripts/check-dylib-deps.py` fails the build if CydiaSubstrate, ElleKit, `/var/jb`, or an `@rpath` dependency appears.
+The package is `packages/com.tikspice.tweak_1.0.2_iphoneos-arm64.deb`. The dylib staged inside it only links system libraries (`/usr/lib` and `/System/Library`). `scripts/check-dylib-deps.py` fails the build if CydiaSubstrate, ElleKit, `/var/jb`, or an `@rpath` dependency appears.
 
 On a Mac with Theos and an iOS SDK already installed, export `THEOS` and run the same `make` command. `scripts/install-theos.sh` is the Linux toolchain only.
 
@@ -188,7 +188,7 @@ Sideload outside LiveContainer: use the patched IPA from the dispatch workflow, 
 ```bash
 ./scripts/inject-ipa.sh \
   --input YourApp.ipa \
-  --tweak packages/com.tikspice.tweak_1.0.1_iphoneos-arm64.deb \
+  --tweak packages/com.tikspice.tweak_1.0.2_iphoneos-arm64.deb \
   --output TikSpice-patched.ipa \
   --plist packaging/PhotoUsage.plist
 ```

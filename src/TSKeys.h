@@ -42,6 +42,9 @@ FOUNDATION_EXPORT NSString *const TSKeyRegionEnabled;
 FOUNDATION_EXPORT NSString *const TSKeyRegionCode;
 
 FOUNDATION_EXPORT NSString *const TSKeyHaptics;
+FOUNDATION_EXPORT NSString *const TSKeyHapticIntensity;
+FOUNDATION_EXPORT NSString *const TSKeyFontChoice;
+FOUNDATION_EXPORT NSString *const TSKeyApplyFont;
 FOUNDATION_EXPORT NSString *const TSKeyLogViewControllers;
 
 FOUNDATION_EXPORT NSArray<NSString *> *TSAllPreferenceKeys(void);

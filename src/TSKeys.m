@@ -2,7 +2,7 @@
 
 NSString *const TSSuiteName = @"com.tikspice.preferences";
 NSNotificationName const TSPrefsChangedNotification = @"com.tikspice.preferences.changed";
-NSString *const TSSpiceVersion = @"1.0.1";
+NSString *const TSSpiceVersion = @"1.0.2";
 
 NSString *const TSKeyThemePreset = @"theme.preset";
 NSString *const TSKeyThemeCustom = @"theme.custom";
@@ -42,6 +42,9 @@ NSString *const TSKeyRegionEnabled = @"region.enabled";
 NSString *const TSKeyRegionCode = @"region.code";
 
 NSString *const TSKeyHaptics = @"entry.haptics";
+NSString *const TSKeyHapticIntensity = @"entry.hapticIntensity";
+NSString *const TSKeyFontChoice = @"entry.fontChoice";
+NSString *const TSKeyApplyFont = @"entry.applyFont";
 NSString *const TSKeyLogViewControllers = @"debug.logViewControllers";
 
 NSArray<NSString *> *TSAllPreferenceKeys(void) {
@@ -56,7 +59,7 @@ NSArray<NSString *> *TSAllPreferenceKeys(void) {
             TSKeySpeedEnabled, TSKeyPlaybackSpeed, TSKeyLoopVideo, TSKeyDisableAutoScroll,
             TSKeyConfirmLike, TSKeyConfirmFollow, TSKeyConfirmComment, TSKeyConfirmShare, TSKeyDisableDoubleTapLike,
             TSKeyPreferCleanURL, TSKeyRegionEnabled, TSKeyRegionCode,
-            TSKeyHaptics, TSKeyLogViewControllers
+            TSKeyHaptics, TSKeyHapticIntensity, TSKeyFontChoice, TSKeyApplyFont, TSKeyLogViewControllers
         ];
     });
     return keys;
