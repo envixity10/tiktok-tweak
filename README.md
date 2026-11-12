@@ -167,7 +167,7 @@ Turn on **Log view controllers** if you want each screen class in the device log
 
 LiveContainer injects `.dylib` files. It does not load a `.deb`. The 1.0.0 dylib also linked `/var/jb/usr/lib/libsubstrate.dylib`. dyld refuses that path inside LiveContainer, so the file never ran and no entry point appeared. LiveContainer’s own ElleKit does not satisfy an absolute `/var/jb` install name.
 
-1.0.1 hooks Objective-C methods with the runtime (`method_setImplementation` via Logos’ internal generator). The shipped dylib does not link CydiaSubstrate, ElleKit, or anything under `/var/jb`.
+The dylib hooks Objective-C methods with the runtime (`method_setImplementation`). It does not link CydiaSubstrate, ElleKit, or anything under `/var/jb`.
 
 Load it like this:
 
@@ -175,7 +175,7 @@ Load it like this:
 2. Download the **TikSpice-dylib** artifact. Leave the `.deb` artifact for a jailbreak install.
 3. Unzip the artifact. In LiveContainer, open **Tweaks** and import `TikSpice.dylib` into the folder you select for TikTok (an app-specific subfolder, or the root Tweaks folder).
 4. Select that folder for TikTok. Leave TweakLoader enabled (`Don't Load TweakLoader` off). LiveContainer signs the dylib when the app launches.
-5. Open TikTok, then Profile → menu → **Settings and privacy**. TikSpice is the first row.
+5. Open TikTok, then Profile → menu → **Settings and privacy**. TikSpice is a row in the Account card (or the first section, if Account isn’t found). It scrolls with the list.
 6. If your build’s settings class is not in `settingsHome`, open the profile hamburger menu. The row is added there instead.
 7. If neither shows it, touch and hold with three fingers. Hook status lists the screen class to add under `settingsHome` or `profileMenu`.
 
