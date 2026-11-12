@@ -1,0 +1,11 @@
+Package: com.tikspice.tweak
+Name: TikSpice
+Depends: mobilesubstrate
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: Personal TikTok theming and customization tweak
+ In-app themes, playback controls, and feed chrome toggles for a
+ decrypted TikTok IPA you sideload on your own device.
+Maintainer: TikSpice <tikspice@localhost>
+Author: TikSpice
+Section: Tweaks
