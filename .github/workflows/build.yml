@@ -1,0 +1,161 @@
+# TikSpice CI
+#
+# push / pull_request: compile the tweak and upload the .deb as an Actions artifact.
+# workflow_dispatch: do that, then inject the package into a decrypted IPA URL
+# you supply and upload the patched IPA as a second artifact.
+#
+# Artifacts stay on GitHub Actions with a short retention. This workflow does
+# not publish releases and does not upload the IPA anywhere else.
+
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      ipa_url:
+        description: "Direct URL to a decrypted IPA you own"
+        required: true
+        type: string
+      display_name:
+        description: "Optional display name override"
+        required: false
+        type: string
+      bundle_id:
+        description: "Optional bundle id override"
+        required: false
+        type: string
+
+concurrency:
+  group: tikspice-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  THEOS: ${{ github.workspace }}/theos
+
+jobs:
+  build-deb:
+    name: Build tweak
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Refuse committed IPAs
+        run: |
+          set -euo pipefail
+          if find . -name '*.ipa' -o -name '*.tipa' | grep -q .; then
+            echo "IPA files must not be committed. They belong in a workflow artifact only." >&2
+            exit 1
+          fi
+
+      - name: Cache Theos
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.THEOS }}
+          key: theos-linux-iphoneos16.5-ldid2.1.5-v1
+
+      - name: Install Theos
+        run: bash scripts/install-theos.sh
+
+      - name: Build .deb
+        run: |
+          set -euo pipefail
+          make clean || true
+          make package FINALPACKAGE=1
+          mkdir -p dist
+          cp -v packages/*.deb dist/
+          find .theos -name 'TikSpice.dylib' -exec cp -v {} dist/ \;
+          test -n "$(ls dist/*.deb)"
+          test -f dist/TikSpice.dylib
+          ls -lh dist
+
+      - name: Upload .deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: TikSpice-deb
+          path: |
+            dist/*.deb
+            dist/TikSpice.dylib
+          retention-days: 5
+          if-no-files-found: error
+
+  inject-ipa:
+    name: Inject into IPA
+    needs: build-deb
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download built tweak
+        uses: actions/download-artifact@v4
+        with:
+          name: TikSpice-deb
+          path: dist
+
+      - name: Install cyan
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            python3 python3-pip python3-venv pipx zip unzip binutils bzip2 tar xz-utils ca-certificates
+          pipx ensurepath
+          pipx install --force "https://github.com/asdfzxcvbn/pyzule-rw/archive/refs/heads/main.zip"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.local/bin:$PATH"
+          cyan --version
+
+      - name: Download IPA
+        env:
+          IPA_URL: ${{ inputs.ipa_url }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${IPA_URL}" ]]; then
+            echo "ipa_url is required." >&2
+            exit 1
+          fi
+          curl --fail --location --retry 3 --retry-delay 2 --silent --show-error \
+            --output input.ipa "$IPA_URL"
+          bytes=$(wc -c < input.ipa)
+          echo "Downloaded ${bytes} bytes"
+          if [[ "$bytes" -lt 1000000 ]]; then
+            echo "File is too small to be a TikTok IPA." >&2
+            exit 1
+          fi
+          unzip -tqq input.ipa
+          unzip -l input.ipa | grep -q 'Payload/.*\.app/'
+
+      - name: Inject TikSpice
+        env:
+          DISPLAY_NAME: ${{ inputs.display_name }}
+          BUNDLE_ID: ${{ inputs.bundle_id }}
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+          deb=$(ls dist/*.deb | head -1)
+          test -n "$deb"
+          args=(--input input.ipa --tweak "$deb" --output TikSpice-patched.ipa --plist packaging/PhotoUsage.plist)
+          if [[ -n "${DISPLAY_NAME}" ]]; then
+            args+=(--name "$DISPLAY_NAME")
+          fi
+          if [[ -n "${BUNDLE_ID}" ]]; then
+            args+=(--bundle-id "$BUNDLE_ID")
+          fi
+          bash scripts/inject-ipa.sh "${args[@]}"
+          ls -lh TikSpice-patched.ipa
+
+      - name: Upload patched IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: TikSpice-patched-ipa
+          path: TikSpice-patched.ipa
+          retention-days: 3
+          if-no-files-found: error

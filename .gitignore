@@ -1,0 +1,14 @@
+.theos/
+.obj/
+obj/
+packages/
+theos/
+dist/
+*.deb
+*.dylib
+*.ipa
+*.tipa
+*.o
+.DS_Store
+input.ipa
+TikSpice-patched.ipa
