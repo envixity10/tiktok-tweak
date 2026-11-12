@@ -41,11 +41,10 @@ FOUNDATION_EXPORT NSString *const TSKeyPreferCleanURL;
 FOUNDATION_EXPORT NSString *const TSKeyRegionEnabled;
 FOUNDATION_EXPORT NSString *const TSKeyRegionCode;
 
-FOUNDATION_EXPORT NSString *const TSKeyShowFloater;
-FOUNDATION_EXPORT NSString *const TSKeyShakeToOpen;
 FOUNDATION_EXPORT NSString *const TSKeyHaptics;
-FOUNDATION_EXPORT NSString *const TSKeyFloaterX;
-FOUNDATION_EXPORT NSString *const TSKeyFloaterY;
+FOUNDATION_EXPORT NSString *const TSKeyHapticIntensity;
+FOUNDATION_EXPORT NSString *const TSKeyFontChoice;
+FOUNDATION_EXPORT NSString *const TSKeyApplyFont;
 FOUNDATION_EXPORT NSString *const TSKeyLogViewControllers;
 
 FOUNDATION_EXPORT NSArray<NSString *> *TSAllPreferenceKeys(void);

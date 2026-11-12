@@ -8,3 +8,4 @@ FOUNDATION_EXPORT void TSHapticSelection(void);
 FOUNDATION_EXPORT void TSHapticWarning(void);
 FOUNDATION_EXPORT void TSHapticSuccess(void);
 FOUNDATION_EXPORT BOOL TSReduceMotion(void);
+FOUNDATION_EXPORT UIFont *TSMappedFont(UIFont *font);

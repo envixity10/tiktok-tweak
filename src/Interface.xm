@@ -192,6 +192,27 @@ static BOOL TSShouldSwallowScroll(UIScrollView *scrollView, CGFloat deltaY, CGFl
 
 %end
 
+static BOOL ts_fontLock = NO;
+
+%hook UILabel
+
+- (void)setFont:(UIFont *)font {
+    if (ts_fontLock || !TSBool(TSKeyApplyFont, NO) || TSIsOwnedView(self)) {
+        %orig;
+        return;
+    }
+    UIFont *mapped = TSMappedFont(font);
+    if (!mapped || mapped == font || [mapped.fontName isEqualToString:font.fontName]) {
+        %orig;
+        return;
+    }
+    ts_fontLock = YES;
+    %orig(mapped);
+    ts_fontLock = NO;
+}
+
+%end
+
 %hook UIViewController
 
 - (void)viewDidAppear:(BOOL)animated {
@@ -200,9 +221,7 @@ static BOOL TSShouldSwallowScroll(UIScrollView *scrollView, CGFloat deltaY, CGFl
     if ([name hasPrefix:@"TS"]) return;
     if (TSBool(TSKeyLogViewControllers, NO)) NSLog(@"[TikSpice] %@", name);
     [TSHookRegistry noteViewControllerClass:name];
-    if ([TSHookRegistry shouldOfferSettingsButtonForClass:name]) {
-        [TSFloater installAccessoryOnViewController:self];
-    }
+    [TSEntry considerViewController:self];
     static CFTimeInterval lastHooks = 0;
     CFTimeInterval now = CFAbsoluteTimeGetCurrent();
     if (now - lastHooks > 2.0) {
@@ -214,13 +233,3 @@ static BOOL TSShouldSwallowScroll(UIScrollView *scrollView, CGFloat deltaY, CGFl
 
 %end
 
-%hook UIWindow
-
-- (void)motionEnded:(UIEventSubtype)motion withEvent:(UIEvent *)event {
-    %orig;
-    if (motion == UIEventSubtypeMotionShake && TSBool(TSKeyShakeToOpen, YES)) {
-        [TSFloater openSettings];
-    }
-}
-
-%end

@@ -60,10 +60,31 @@ static BOOL TSHapticsAllowed(void) {
     return TSBool(TSKeyHaptics, YES);
 }
 
+static CGFloat TSHapticIntensity(void) {
+    float value = TSFloat(TSKeyHapticIntensity, 0.85f);
+    if (value < 0.25f) value = 0.25f;
+    if (value > 1.f) value = 1.f;
+    return value;
+}
+
 void TSHapticLight(void) {
     if (!TSHapticsAllowed()) return;
     UIImpactFeedbackGenerator *generator = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
-    [generator impactOccurred];
+    [generator impactOccurredWithIntensity:TSHapticIntensity()];
+}
+
+UIFont *TSMappedFont(UIFont *font) {
+    if (!font) return nil;
+    NSString *choice = [[TSPrefs shared] stringForKey:TSKeyFontChoice];
+    if (choice.length == 0 || [choice isEqualToString:@"system"]) return font;
+    UIFontDescriptorSystemDesign design = UIFontDescriptorSystemDesignDefault;
+    if ([choice isEqualToString:@"rounded"]) design = UIFontDescriptorSystemDesignRounded;
+    else if ([choice isEqualToString:@"serif"]) design = UIFontDescriptorSystemDesignSerif;
+    else if ([choice isEqualToString:@"mono"]) design = UIFontDescriptorSystemDesignMonospaced;
+    else return font;
+    UIFontDescriptor *descriptor = [font.fontDescriptor fontDescriptorWithDesign:design];
+    if (!descriptor) return font;
+    return [UIFont fontWithDescriptor:descriptor size:font.pointSize];
 }
 
 void TSHapticSelection(void) {

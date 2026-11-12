@@ -4,7 +4,6 @@
 #import "Owned.h"
 #import "UIUtil.h"
 #import "HookRegistry.h"
-#import "Floater.h"
 #import "Download.h"
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <objc/message.h>
@@ -90,6 +89,18 @@ static void TSStyleController(UITableViewController *controller) {
     TSMarkOwned(controller.navigationController.view);
 }
 
+static UIImage *TSBadgeImage(NSString *symbol, UIColor *tint) {
+    UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(32, 32)];
+    return [renderer imageWithActions:^(UIGraphicsImageRendererContext *context) {
+        UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(0, 0, 32, 32) cornerRadius:9];
+        [[tint colorWithAlphaComponent:0.2] setFill];
+        [path fill];
+        UIImage *icon = [UIImage systemImageNamed:symbol withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:15 weight:UIFontWeightSemibold]];
+        icon = [icon imageWithTintColor:tint renderingMode:UIImageRenderingModeAlwaysOriginal];
+        [icon drawInRect:CGRectMake(7, 7, 18, 18)];
+    }];
+}
+
 static void TSFillListCell(UITableViewCell *cell, NSString *title, NSString *subtitle, NSString *symbol, TSTheme *theme, UIColor *detailColor) {
     UIListContentConfiguration *content = [UIListContentConfiguration subtitleCellConfiguration];
     content.text = title;
@@ -101,8 +112,10 @@ static void TSFillListCell(UITableViewCell *cell, NSString *title, NSString *sub
     content.secondaryTextProperties.font = [UIFont preferredFontForTextStyle:UIFontTextStyleFootnote];
     content.secondaryTextProperties.numberOfLines = 3;
     if (symbol.length) {
-        content.image = [UIImage systemImageNamed:symbol];
-        content.imageProperties.tintColor = theme.accent;
+        content.image = TSBadgeImage(symbol, theme.accent);
+        content.imageProperties.tintColor = nil;
+        content.imageProperties.maximumSize = CGSizeMake(32, 32);
+        content.imageProperties.reservedLayoutSize = CGSizeMake(32, 32);
     }
     cell.contentConfiguration = content;
     UIBackgroundConfiguration *background = [UIBackgroundConfiguration listGroupedCellConfiguration];
@@ -196,6 +209,12 @@ static NSArray<NSString *> *TSHideKeys(void) {
     return self;
 }
 - (void)changed {
+    if (!TSReduceMotion()) {
+        self.toggle.transform = CGAffineTransformMakeScale(0.9, 0.9);
+        [UIView animateWithDuration:0.48 delay:0 usingSpringWithDamping:0.52 initialSpringVelocity:0.9 options:UIViewAnimationOptionAllowUserInteraction animations:^{
+            self.toggle.transform = CGAffineTransformIdentity;
+        } completion:nil];
+    }
     if (self.onChange) self.onChange(self.toggle, self.toggle.on);
 }
 @end
@@ -404,6 +423,10 @@ static NSArray<NSString *> *TSHideKeys(void) {
     self.lineTwo.backgroundColor = theme.textSecondary;
     self.nameLabel.text = theme.name;
     self.nameLabel.textColor = chrome.textPrimary;
+    self.layer.shadowColor = chrome.accent.CGColor;
+    self.layer.shadowOpacity = selected ? 0.45 : 0;
+    self.layer.shadowRadius = selected ? 14 : 0;
+    self.layer.shadowOffset = CGSizeZero;
     self.accessibilityLabel = theme.name;
 }
 @end
@@ -467,10 +490,135 @@ static NSArray<NSString *> *TSHideKeys(void) {
 
 #pragma mark - Settings
 
+@interface TSHeroHeader : UIView
+- (void)refresh;
+@end
+
+@implementation TSHeroHeader {
+    CAGradientLayer *_gradient;
+    UILabel *_kicker;
+    UILabel *_titleLabel;
+    UILabel *_subtitleLabel;
+    UIStackView *_chips;
+}
+
+- (instancetype)initWithFrame:(CGRect)frame {
+    self = [super initWithFrame:frame];
+    if (!self) return nil;
+    self.clipsToBounds = YES;
+    _gradient = [CAGradientLayer layer];
+    _gradient.startPoint = CGPointMake(0, 0);
+    _gradient.endPoint = CGPointMake(1, 1);
+    [self.layer insertSublayer:_gradient atIndex:0];
+    if (!TSReduceMotion()) {
+        CABasicAnimation *drift = [CABasicAnimation animationWithKeyPath:@"startPoint"];
+        drift.fromValue = [NSValue valueWithCGPoint:CGPointMake(0, 0.2)];
+        drift.toValue = [NSValue valueWithCGPoint:CGPointMake(0.8, 1)];
+        drift.duration = 6;
+        drift.autoreverses = YES;
+        drift.repeatCount = HUGE_VALF;
+        [_gradient addAnimation:drift forKey:@"drift"];
+    }
+    _kicker = [UILabel new];
+    _kicker.text = @"TIKSPICE";
+    _kicker.font = [UIFont systemFontOfSize:12 weight:UIFontWeightSemibold];
+    _titleLabel = [UILabel new];
+    _titleLabel.text = @"Make the feed yours";
+    _titleLabel.font = [UIFont systemFontOfSize:28 weight:UIFontWeightBold];
+    _subtitleLabel = [UILabel new];
+    _subtitleLabel.text = @"Themes, playback, and a quieter TikTok.";
+    _subtitleLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleSubheadline];
+    _subtitleLabel.numberOfLines = 2;
+    _chips = [UIStackView new];
+    _chips.axis = UILayoutConstraintAxisHorizontal;
+    _chips.spacing = 8;
+    _chips.distribution = UIStackViewDistributionFillEqually;
+    for (UIView *view in @[_kicker, _titleLabel, _subtitleLabel, _chips]) {
+        view.translatesAutoresizingMaskIntoConstraints = NO;
+        [self addSubview:view];
+    }
+    [NSLayoutConstraint activateConstraints:@[
+        [_kicker.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:20],
+        [_kicker.topAnchor constraintEqualToAnchor:self.topAnchor constant:18],
+        [_titleLabel.leadingAnchor constraintEqualToAnchor:_kicker.leadingAnchor],
+        [_titleLabel.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-20],
+        [_titleLabel.topAnchor constraintEqualToAnchor:_kicker.bottomAnchor constant:4],
+        [_subtitleLabel.leadingAnchor constraintEqualToAnchor:_kicker.leadingAnchor],
+        [_subtitleLabel.trailingAnchor constraintEqualToAnchor:_titleLabel.trailingAnchor],
+        [_subtitleLabel.topAnchor constraintEqualToAnchor:_titleLabel.bottomAnchor constant:4],
+        [_chips.leadingAnchor constraintEqualToAnchor:_kicker.leadingAnchor],
+        [_chips.trailingAnchor constraintEqualToAnchor:_titleLabel.trailingAnchor],
+        [_chips.topAnchor constraintEqualToAnchor:_subtitleLabel.bottomAnchor constant:16],
+        [_chips.heightAnchor constraintEqualToConstant:34],
+    ]];
+    [self refresh];
+    return self;
+}
+
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    _gradient.frame = self.bounds;
+}
+
+- (void)refresh {
+    TSTheme *theme = [TSTheme current];
+    UIColor *accent = theme.accent;
+    _gradient.colors = @[
+        (id)[accent colorWithAlphaComponent:0.95].CGColor,
+        (id)[theme.background colorWithAlphaComponent:0.2].CGColor,
+        (id)theme.background.CGColor
+    ];
+    _kicker.textColor = [UIColor colorWithWhite:1 alpha:0.82];
+    _titleLabel.textColor = UIColor.whiteColor;
+    _subtitleLabel.textColor = [UIColor colorWithWhite:1 alpha:0.78];
+    for (UIView *view in _chips.arrangedSubviews) [view removeFromSuperview];
+    [self addChip:@"Ads" key:TSKeyHideAds symbol:@"eye.slash"];
+    [self addChip:@"LIVE" key:TSKeyHideLive symbol:@"video.slash"];
+    [self addChip:@"Loop" key:TSKeyLoopVideo symbol:@"repeat"];
+    [self addChip:@"Bars" key:TSKeyThemeChrome symbol:@"paintbrush.fill"];
+}
+
+- (void)addChip:(NSString *)title key:(NSString *)key symbol:(NSString *)symbol {
+    BOOL on = TSBool(key, NO);
+    UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
+    UIButtonConfiguration *config = [UIButtonConfiguration plainButtonConfiguration];
+    config.title = title;
+    config.image = [UIImage systemImageNamed:symbol];
+    config.imagePadding = 4;
+    config.cornerStyle = UIButtonConfigurationCornerStyleMedium;
+    config.baseForegroundColor = UIColor.whiteColor;
+    config.background.backgroundColor = on ? [[UIColor whiteColor] colorWithAlphaComponent:0.28] : [[UIColor blackColor] colorWithAlphaComponent:0.18];
+    config.contentInsets = NSDirectionalEdgeInsetsMake(6, 8, 6, 8);
+    button.configuration = config;
+    button.accessibilityIdentifier = key;
+    [button addTarget:self action:@selector(chipTapped:) forControlEvents:UIControlEventTouchUpInside];
+    [_chips addArrangedSubview:button];
+}
+
+- (void)chipTapped:(UIButton *)button {
+    NSString *key = button.accessibilityIdentifier;
+    BOOL on = !TSBool(key, NO);
+    [[TSPrefs shared] setBool:on forKey:key];
+    TSHapticLight();
+    if (!TSReduceMotion()) {
+        button.transform = CGAffineTransformMakeScale(0.92, 0.92);
+        [UIView animateWithDuration:0.45 delay:0 usingSpringWithDamping:0.6 initialSpringVelocity:0.8 options:0 animations:^{
+            button.transform = CGAffineTransformIdentity;
+        } completion:nil];
+    }
+    [self refresh];
+}
+
+@end
+
 @interface TSSettingsViewController () <UISearchResultsUpdating, UIDocumentPickerDelegate>
 @property (nonatomic, strong) UISearchController *search;
 @property (nonatomic, copy) NSArray<TSSection *> *allSections;
 @property (nonatomic, copy) NSArray<TSSection *> *visibleSections;
+@property (nonatomic, strong) TSHeroHeader *hero;
+@end
+
+@interface TSAboutViewController : UITableViewController
 @end
 
 @implementation TSSettingsViewController
@@ -501,6 +649,8 @@ static NSArray<NSString *> *TSHideKeys(void) {
     [self.tableView registerClass:[TSTextCell class] forCellReuseIdentifier:@"text"];
     [self.tableView registerClass:[TSPresetCell class] forCellReuseIdentifier:@"preset"];
     [self.tableView registerClass:[UITableViewCell class] forCellReuseIdentifier:@"basic"];
+    self.hero = [[TSHeroHeader alloc] initWithFrame:CGRectMake(0, 0, 0, 188)];
+    self.tableView.tableHeaderView = self.hero;
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(prefsChanged:) name:TSPrefsChangedNotification object:nil];
     TSPrivateHooksInstall();
     [self rebuild];
@@ -527,6 +677,14 @@ static NSArray<NSString *> *TSHideKeys(void) {
 
 - (void)applyTheme {
     TSStyleController(self);
+    [self.hero refresh];
+    if (self.hero && self.tableView.tableHeaderView == self.hero) {
+        CGRect frame = self.hero.frame;
+        frame.size.width = self.tableView.bounds.size.width;
+        frame.size.height = 188;
+        self.hero.frame = frame;
+        self.tableView.tableHeaderView = self.hero;
+    }
     for (UITableViewCell *cell in self.tableView.visibleCells) {
         if ([cell isKindOfClass:[TSTextCell class]] && ((TSTextCell *)cell).field.isFirstResponder) continue;
         if ([cell isKindOfClass:[TSSliderCell class]] && ((TSSliderCell *)cell).slider.isTracking) continue;
@@ -573,12 +731,27 @@ static NSArray<NSString *> *TSHideKeys(void) {
         self.visibleSections = sections;
     }
     [self.tableView reloadData];
-    if (self.visibleSections.count == 0) {
-        UILabel *empty = [[UILabel alloc] initWithFrame:self.tableView.bounds];
-        empty.text = @"No matching settings";
-        empty.textAlignment = NSTextAlignmentCenter;
-        empty.textColor = [TSTheme current].textSecondary;
-        empty.font = [UIFont preferredFontForTextStyle:UIFontTextStyleBody];
+        if (self.visibleSections.count == 0) {
+        UIView *empty = [[UIView alloc] initWithFrame:self.tableView.bounds];
+        UIImageView *icon = [[UIImageView alloc] initWithImage:[UIImage systemImageNamed:@"magnifyingglass"]];
+        icon.tintColor = [TSTheme current].textSecondary;
+        icon.contentMode = UIViewContentModeScaleAspectFit;
+        icon.frame = CGRectMake(0, 0, 36, 36);
+        UILabel *label = [UILabel new];
+        label.text = @"Nothing matches that search";
+        label.textAlignment = NSTextAlignmentCenter;
+        label.textColor = [TSTheme current].textSecondary;
+        label.font = [UIFont preferredFontForTextStyle:UIFontTextStyleBody];
+        UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[icon, label]];
+        stack.axis = UILayoutConstraintAxisVertical;
+        stack.spacing = 10;
+        stack.alignment = UIStackViewAlignmentCenter;
+        stack.translatesAutoresizingMaskIntoConstraints = NO;
+        [empty addSubview:stack];
+        [NSLayoutConstraint activateConstraints:@[
+            [stack.centerXAnchor constraintEqualToAnchor:empty.centerXAnchor],
+            [stack.centerYAnchor constraintEqualToAnchor:empty.centerYAnchor constant:-40],
+        ]];
         self.tableView.backgroundView = empty;
     } else {
         self.tableView.backgroundView = nil;
@@ -626,7 +799,11 @@ static NSArray<NSString *> *TSHideKeys(void) {
     [lookRows addObject:TSActionRow(@"Paste theme JSON", @"Read a theme from the clipboard.", @"doc.on.clipboard", ^(UIViewController *controller) {
         [(TSSettingsViewController *)controller pasteTheme];
     })];
-    [lookRows addObject:TSToggleRow(@"Color the tab and nav bars", @"Apply surface and accent to bars.", @"paintbrush.fill", TSKeyThemeChrome)];
+    [lookRows addObject:TSActionRow(@"Typeface", @"System, rounded, serif, or mono. Optional across TikTok.", @"textformat", ^(UIViewController *controller) {
+        [(TSSettingsViewController *)controller chooseFont];
+    })];
+    [lookRows addObject:TSToggleRow(@"Use that typeface in TikTok", @"Keeps each label’s size and weight.", @"character.textbox", TSKeyApplyFont)];
+    [lookRows addObject:TSToggleRow(@"Color the tab and nav bars", @"Apply surface and accent to bars and buttons.", @"paintbrush.fill", TSKeyThemeChrome)];
     [lookRows addObject:TSToggleRow(@"Tint icons with the accent", @"Window tint and switches follow the accent.", @"drop.fill", TSKeyThemeGlobalTint)];
     [lookRows addObject:TSToggleRow(@"Recolor lists", @"Experimental. List backgrounds pick up the theme. The player is left alone.", @"square.stack.3d.up", TSKeyThemeSurfaces)];
     look.rows = lookRows;
@@ -721,11 +898,24 @@ static NSArray<NSString *> *TSHideKeys(void) {
 
     TSSection *access = [TSSection new];
     access.title = @"Opening TikSpice";
-    access.footer = @"The sparkle button can be dragged. Shake stays available so hiding the button does not lock you out.";
+    access.footer = @"TikSpice is a row inside Settings and privacy, in the Account card when that section exists. Three-finger hold still opens this panel.";
+    TSRow *haptic = [TSRow new];
+    haptic.kind = TSRowSlider;
+    haptic.title = @"Haptic strength";
+    haptic.prefKey = TSKeyHapticIntensity;
+    haptic.sliderMin = 0.3f;
+    haptic.sliderMax = 1.f;
+    haptic.searchBlob = @"haptic strength intensity";
+    TSRow *where = [TSRow new];
+    where.kind = TSRowInfo;
+    where.title = @"Settings and privacy";
+    where.subtitle = @"First row in that screen. Three-finger hold opens this panel if the row is missing.";
+    where.symbol = @"gearshape";
+    where.searchBlob = @"settings privacy entry three finger hold menu";
     access.rows = @[
-        TSToggleRow(@"Floating button", @"A draggable sparkle over the app.", @"circle.circle", TSKeyShowFloater),
-        TSToggleRow(@"Shake to open", @"Motion opens this panel.", @"iphone.radiowaves.left.and.right", TSKeyShakeToOpen),
+        where,
         TSToggleRow(@"Haptics", @"Taps and confirms click.", @"waveform", TSKeyHaptics),
+        haptic,
     ];
 
     TSSection *advanced = [TSSection new];
@@ -736,6 +926,9 @@ static NSArray<NSString *> *TSHideKeys(void) {
             [controller.navigationController pushViewController:[TSHookStatusViewController new] animated:YES];
         }),
         TSToggleRow(@"Log view controllers", @"Print each screen class to the device log.", @"text.alignleft", TSKeyLogViewControllers),
+        TSActionRow(@"About", @"Version, how the row is inserted, and credits.", @"info.circle", ^(UIViewController *controller) {
+            [controller.navigationController pushViewController:[TSAboutViewController new] animated:YES];
+        }),
         TSActionRow(@"Reset everything", @"Restore the Spice theme and turn features off.", @"arrow.counterclockwise", ^(UIViewController *controller) {
             [(TSSettingsViewController *)controller confirmReset];
         }),
@@ -806,12 +999,25 @@ static NSArray<NSString *> *TSHideKeys(void) {
     [self rebuild];
 }
 
+- (void)chooseFont {
+    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:@"Typeface" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
+    for (NSArray<NSString *> *choice in @[@[@"System", @"system"], @[@"Rounded", @"rounded"], @[@"Serif", @"serif"], @[@"Mono", @"mono"]]) {
+        [sheet addAction:[UIAlertAction actionWithTitle:choice[0] style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
+            [[TSPrefs shared] setString:choice[1] forKey:TSKeyFontChoice];
+            TSHapticSelection();
+        }]];
+    }
+    [sheet addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+    sheet.popoverPresentationController.sourceView = self.view;
+    sheet.popoverPresentationController.sourceRect = CGRectMake(CGRectGetMidX(self.view.bounds), 120, 1, 1);
+    [self presentViewController:sheet animated:YES completion:nil];
+}
+
 - (void)confirmReset {
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Reset TikSpice?" message:@"Themes and toggles return to their defaults." preferredStyle:UIAlertControllerStyleAlert];
     [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
     [alert addAction:[UIAlertAction actionWithTitle:@"Reset" style:UIAlertActionStyleDestructive handler:^(__unused UIAlertAction *action) {
         [[TSPrefs shared] reset];
-        [TSFloater install];
         TSHapticSuccess();
         [self rebuild];
     }]];
@@ -915,7 +1121,18 @@ static NSArray<NSString *> *TSHideKeys(void) {
         slider.slider.minimumValue = row.sliderMin;
         slider.slider.maximumValue = row.sliderMax;
         slider.chips.hidden = !row.speedChips;
-        if ([row.prefKey isEqualToString:TSKeyPlaybackSpeed]) {
+        if ([row.prefKey isEqualToString:TSKeyHapticIntensity]) {
+            float value = TSFloat(TSKeyHapticIntensity, 0.85f);
+            slider.slider.value = value;
+            slider.titleLabel.text = @"Haptic strength";
+            slider.valueLabel.text = [NSString stringWithFormat:@"%.0f%%", value * 100];
+            __weak TSSliderCell *weakSlider = slider;
+            slider.onChange = ^(float next, BOOL continuous) {
+                [[TSPrefs shared] setFloat:next forKey:TSKeyHapticIntensity];
+                weakSlider.valueLabel.text = [NSString stringWithFormat:@"%.0f%%", next * 100];
+                if (!continuous) TSHapticLight();
+            };
+        } else if ([row.prefKey isEqualToString:TSKeyPlaybackSpeed]) {
             float value = TSFloat(TSKeyPlaybackSpeed, 1);
             slider.slider.value = value;
             slider.titleLabel.text = @"Speed";
@@ -993,24 +1210,13 @@ static NSArray<NSString *> *TSHideKeys(void) {
 }
 
 - (BOOL)fallbackForKey:(NSString *)key {
-    if ([key isEqualToString:TSKeyShowFloater] || [key isEqualToString:TSKeyShakeToOpen] || [key isEqualToString:TSKeyHaptics]) return YES;
-    return NO;
+    return [key isEqualToString:TSKeyHaptics];
 }
 
 - (void)toggle:(NSString *)key on:(BOOL)on sender:(UISwitch *)sender {
-    if ([key isEqualToString:TSKeyShowFloater] && !on && !TSBool(TSKeyShakeToOpen, YES)) {
-        sender.on = YES;
-        TSPresentAlert(self, @"Keep a way back in", @"Leave Shake to open on before hiding the button.");
-        return;
-    }
-    if ([key isEqualToString:TSKeyShakeToOpen] && !on && !TSBool(TSKeyShowFloater, YES)) {
-        sender.on = YES;
-        TSPresentAlert(self, @"Keep a way back in", @"Show the floating button before turning shake off.");
-        return;
-    }
+    (void)sender;
     [[TSPrefs shared] setBool:on forKey:key];
     TSHapticLight();
-    if ([key isEqualToString:TSKeyShowFloater]) [TSFloater install];
 }
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -1128,7 +1334,7 @@ static NSArray<NSString *> *TSHideKeys(void) {
         [sections addObject:recentSection];
     }
 
-    NSArray *groups = @[@"ads", @"feed", @"video", @"region", @"live", @"shop", @"upload", @"story", @"music", @"settings", @"profile", @"interaction", @"player"];
+    NSArray *groups = @[@"ads", @"feed", @"video", @"region", @"live", @"shop", @"upload", @"story", @"music", @"settingsHome", @"profileMenu", @"profile", @"interaction", @"player"];
     for (NSString *group in groups) {
         NSMutableArray *rows = [NSMutableArray array];
         for (TSHookResult *result in results) {
@@ -1202,6 +1408,67 @@ static NSArray<NSString *> *TSHideKeys(void) {
     if ([view isKindOfClass:[UITableViewHeaderFooterView class]]) {
         ((UITableViewHeaderFooterView *)view).textLabel.textColor = [TSTheme current].textSecondary;
     }
+}
+
+@end
+
+@implementation TSAboutViewController
+
+- (instancetype)init {
+    return [super initWithStyle:UITableViewStyleInsetGrouped];
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.title = @"About";
+    [self.tableView registerClass:[UITableViewCell class] forCellReuseIdentifier:@"about"];
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    TSStyleController(self);
+}
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView { return 2; }
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { return section == 0 ? 2 : 3; }
+- (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
+    return section == 0 ? @"TikSpice" : @"How it loads";
+}
+- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
+    if (section == 0) return @"Personal theming for a TikTok you sideload yourself. Hooks use the Objective-C runtime, so the dylib does not link CydiaSubstrate or ElleKit.";
+    return @"If the Account row is missing, hold three fingers on the screen. Hook status shows the class to add in HookRegistry.m.";
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"about" forIndexPath:indexPath];
+    TSTheme *theme = [TSTheme current];
+    NSString *title = @"";
+    NSString *detail = @"";
+    NSString *symbol = @"sparkles";
+    if (indexPath.section == 0 && indexPath.row == 0) {
+        title = @"Version";
+        detail = TSSpiceVersion;
+        symbol = @"number";
+    } else if (indexPath.section == 0) {
+        title = @"Preferences";
+        detail = TSSuiteName;
+        symbol = @"internaldrive";
+    } else if (indexPath.row == 0) {
+        title = @"Settings row";
+        detail = @"Inside the Account section of Settings and privacy.";
+        symbol = @"list.bullet";
+    } else if (indexPath.row == 1) {
+        title = @"Recovery";
+        detail = @"Three-finger hold.";
+        symbol = @"hand.raised";
+    } else {
+        title = @"LiveContainer";
+        detail = @"Import TikSpice.dylib, not the .deb.";
+        symbol = @"shippingbox";
+    }
+    TSFillListCell(cell, title, detail, symbol, theme, nil);
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
 }
 
 @end

@@ -58,10 +58,26 @@ static const TSHookSpec kSpecs[] = {
     {.ident = "music.info", .group = "music", .className = "AWEMusicInfoView", .purpose = "Music ticker", .kind = TSHookKindProbe, .unverified = 1},
     {.ident = "music.ttk", .group = "music", .className = "TTKMusicInfoView", .purpose = "Music ticker", .kind = TSHookKindProbe, .unverified = 1},
 
-    {.ident = "settings.table", .group = "settings", .className = "AWESettingsTableViewController", .purpose = "Settings screen", .kind = TSHookKindProbe, .unverified = 1},
-    {.ident = "settings.base", .group = "settings", .className = "AWESettingBaseViewController", .purpose = "Settings screen", .kind = TSHookKindProbe, .unverified = 1},
-    {.ident = "settings.ttk", .group = "settings", .className = "TTKSettingsViewController", .purpose = "Settings screen", .kind = TSHookKindProbe, .unverified = 1},
-    {.ident = "settings.ttkBase", .group = "settings", .className = "TTKSettingBaseViewController", .purpose = "Settings screen", .kind = TSHookKindProbe, .unverified = 1},
+    // settingsHome: exact class of the root "Settings and privacy" page.
+    // Subclasses are not treated as a match. Add the class shown in Hook status.
+    {.ident = "settings.table", .group = "settingsHome", .className = "AWESettingsTableViewController", .purpose = "Settings and privacy", .kind = TSHookKindProbe, .unverified = 1},
+    {.ident = "settings.view", .group = "settingsHome", .className = "AWESettingsViewController", .purpose = "Settings and privacy", .kind = TSHookKindProbe, .unverified = 1},
+    {.ident = "settings.base", .group = "settingsHome", .className = "AWESettingBaseViewController", .purpose = "Settings and privacy", .kind = TSHookKindProbe, .unverified = 1},
+    {.ident = "settings.list", .group = "settingsHome", .className = "AWESettingTableViewController", .purpose = "Settings and privacy", .kind = TSHookKindProbe, .unverified = 1},
+    {.ident = "settings.ttk", .group = "settingsHome", .className = "TTKSettingsViewController", .purpose = "Settings and privacy", .kind = TSHookKindProbe, .unverified = 1},
+    {.ident = "settings.ttkHome", .group = "settingsHome", .className = "TTKSettingHomeViewController", .purpose = "Settings and privacy", .kind = TSHookKindProbe, .unverified = 1},
+    {.ident = "settings.ttkList", .group = "settingsHome", .className = "TTKSettingListViewController", .purpose = "Settings and privacy", .kind = TSHookKindProbe, .unverified = 1},
+    {.ident = "settings.ttkBase", .group = "settingsHome", .className = "TTKSettingBaseViewController", .purpose = "Settings and privacy", .kind = TSHookKindProbe, .unverified = 1},
+    {.ident = "settings.ttkPage", .group = "settingsHome", .className = "TTKSettingsHomeViewController", .purpose = "Settings and privacy", .kind = TSHookKindProbe, .unverified = 1},
+
+    // profileMenu: hamburger sheet. Used only when no settingsHome class exists.
+    {.ident = "menu.ttk", .group = "profileMenu", .className = "TTKProfileMenuViewController", .purpose = "Profile menu sheet", .kind = TSHookKindProbe, .unverified = 1},
+    {.ident = "menu.ttkSheet", .group = "profileMenu", .className = "TTKProfileMenuSheetViewController", .purpose = "Profile menu sheet", .kind = TSHookKindProbe, .unverified = 1},
+    {.ident = "menu.awe", .group = "profileMenu", .className = "AWEProfileMenuViewController", .purpose = "Profile menu sheet", .kind = TSHookKindProbe, .unverified = 1},
+    {.ident = "menu.aweSide", .group = "profileMenu", .className = "AWEProfileSideMenuViewController", .purpose = "Profile menu sheet", .kind = TSHookKindProbe, .unverified = 1},
+    {.ident = "menu.ttkSide", .group = "profileMenu", .className = "TTKProfileSideMenuViewController", .purpose = "Profile menu sheet", .kind = TSHookKindProbe, .unverified = 1},
+    {.ident = "menu.home", .group = "profileMenu", .className = "TTKUserHomeMenuViewController", .purpose = "Profile menu sheet", .kind = TSHookKindProbe, .unverified = 1},
+    {.ident = "menu.slide", .group = "profileMenu", .className = "AWEProfileSlidingViewController", .purpose = "Profile menu sheet", .kind = TSHookKindProbe, .unverified = 1},
 
     {.ident = "profile.awe", .group = "profile", .className = "AWEProfileViewController", .purpose = "Profile screen", .kind = TSHookKindProbe, .unverified = 1},
     {.ident = "profile.ttk", .group = "profile", .className = "TTKProfileViewController", .purpose = "Profile screen", .kind = TSHookKindProbe, .unverified = 1},
@@ -128,8 +144,11 @@ static NSMutableArray<NSString *> *ts_recent;
     return [[self classNamesInGroup:group] containsObject:className];
 }
 
-+ (BOOL)shouldOfferSettingsButtonForClass:(NSString *)className {
-    return [self className:className inGroup:@"settings"] || [self className:className inGroup:@"profile"];
++ (BOOL)groupHasLoadedClass:(NSString *)group {
+    for (NSString *name in [self classNamesInGroup:group]) {
+        if (objc_getClass(name.UTF8String)) return YES;
+    }
+    return NO;
 }
 
 + (void)noteViewControllerClass:(NSString *)className {
